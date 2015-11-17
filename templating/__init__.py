@@ -43,6 +43,9 @@ config_schema = {
 
 
 def deep_update(d, u):
+   if u is None:
+       return d
+
    for k, v in u.items():
         if isinstance(v, collections.Mapping):
             r = deep_update(d.get(k, {}), v)
