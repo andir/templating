@@ -187,6 +187,10 @@ def main():
     logging.basicConfig(level=log_level, format=log_format)
 
     config_path = discover_config(args.config)
+
+    if config_path is None:
+        return 1
+
     with open(config_path) as fh:
         config = Config(fh)
 
