@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='templating',
-    version='0.1.0',
+    version='0.1.1',
     packages=['templating'],
     url='https://github.com/andir/templating',
     license='GPLv3',
@@ -14,4 +14,9 @@ setup(
           'templating = templating:main',
       ],
     },
+    install_requires=[
+        'Jinja2',
+        'PyYAML',
+        'jsonschema',
+    ]
 )
