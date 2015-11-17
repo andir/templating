@@ -215,7 +215,7 @@ def main():
         for instance in instances:
             rendered_name = instance.render_template_name(name)
             dest = os.path.join(config.config.get('output_dir', ''), rendered_name)
-
+            logger.info('Rendering %s', dest)
             with open(dest, 'w+') as fh:
                 fh.write(instance.render(template))
 
