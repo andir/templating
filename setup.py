@@ -9,7 +9,7 @@ setup(
     author='Andreas Rammhold',
     author_email='andreas@rammhold.de',
     description='Configurable templating of files.',
-    entry_points = {
+    entry_points={
       'console_scripts': [
           'templating = templating:main',
       ],
