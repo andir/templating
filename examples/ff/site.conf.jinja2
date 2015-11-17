@@ -1,0 +1,109 @@
+{
+	hostname_prefix = '{{ hostname_prefix }}',
+	site_name = '{{ site_name }}',
+	site_code = '{{ site_code }}',
+{%- if opkg %}
+	opkg = {
+{%- for key, value in opkg.items() %}
+            {{ key }} = {{ value }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+	},
+{%- endif %}
+	prefix4 = '{{ prefix4 }}',	 -- ipv4 prefix
+	prefix6 = '{{ prefix6 }}', -- ipv6 prefix (node announces via radvd)
+	timezone = '{{ timezone }}', -- Europe/Berlin
+	ntp_servers = {
+{%- for ntp_server in ntp_servers %}
+		'{{ ntp_server }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+	},
+	regdom = '{{ regdom }}',
+
+{%- for n, m in [('wifi24', wifi24), ('wifi5', wifi5)] %}
+{%-  if m %}
+	{{ n }} = {
+		channel = {{ m['channel'] }},
+		htmode = '{{ m['htmode'] }}',
+		ap = {
+{%- for key, value in m['ap'].items() %}
+				{{ key }} = '{{ value }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+		},
+		ibss = {
+			ssid = '{{ m['ibss']['ssid'] }}',
+			bssid = '{{ m['ibss']['bssid'] }}',
+			mcast_rate = {{ m['ibss']['mcast_rate'] }},
+		},
+		mesh = {
+			id = '{{ m['mesh']['id'] }}',
+			mcast_rate = {{ m['mesh']['mcast_rate'] }};
+		},
+	},
+{%- endif %}
+{%- endfor %}
+	-- next_node address always references the node you are connected to
+	next_node = {
+		ip4 = '{{ next_node['ip4'] }}',
+		ip6 = '{{ next_node['ip6'] }}',
+		mac = '{{ next_node['mac'] }}',
+	},
+
+	{% if fastd_mesh_vpn %}
+	-- vpn uplink to interconnect wireless-meshs and provide uplink connectivity
+	fastd_mesh_vpn = {
+		methods = {{ '{' }}{% for method in fastd_mesh_vpn['methods'] %}'{{ method }}'{% if not loop.last %},{% endif %}{% endfor %}},
+		configurable = {{ fastd_mesh_vpn['configurable'] }},
+		mtu = {{ fastd_mesh_vpn['mtu'] }},
+		groups = {
+{%- for name, values in fastd_mesh_vpn['groups'].items() %}
+			{{ name }} = {
+				limit = {{ values['limit'] }},
+ 				peers = {
+{%- for peer_name, peer_values in values['peers'].items()  %}
+					{{ peer_name }} = {
+						key = '{{ peer_values['key'] }}',
+						remotes = {
+{%- for remote in peer_values['remotes'] %}
+							'{{ remote }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+						},
+					}{% if not loop.last %},{% endif %}
+{%- endfor %}
+				},
+			},
+{%- endfor %}
+		},
+
+{%- if fastd_mesh_vpn['bandwith_limit'] %}
+		-- bandwidth limit (in kbit/s)
+		bandwidth_limit = {
+			enabled = {{ fastd_mesh_vpn['bandwith_limit']['enabled'] }},
+			limit_egress = {{ fastd_mesh_vpn['bandwith_limit']['limit_egress'] }},
+			limit_ingress = {{ fastd_mesh_vpn['bandwith_limit']['limit_ingress'] }},
+		},
+{%- endif %}
+	},
+
+{%- endif %}
+	autoupdater = {
+		branch = '{{ autoupdater['branch'] }}',
+		branches = {
+{%- for name, values in autoupdater['branches'].items()  %}
+			{{ name }} = {
+				name = '{{ name }}',
+				mirrors = {
+{%- for mirror in values['mirrors'] %}
+					'{{ mirror }}'{% if not loop.last %},{% endif %}
+{%- endfor  %}
+				},
+				good_signatures = {{ values['good_signatures'] }},
+				pubkeys = {
+{%- for key in autoupdater['pubkeys'] + values.get('pubkeys', []) %}
+					'{{ key }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+				},
+			},
+{%- endfor %}
+		},
+	},
+}
