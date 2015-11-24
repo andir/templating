@@ -6,6 +6,7 @@ import copy
 import jinja2
 import sys
 import collections
+import importlib
 from jsonschema import validate as validate_schema
 
 instance_schema = {
@@ -22,6 +23,9 @@ instance_schema = {
 }
 
 config_schema = {
+    'plugins': {
+        'type': 'array'
+    },
     'defaults': {
         'type': 'object'
     },
@@ -72,6 +76,9 @@ class Config(object):
         if 'templates' not in self._config:
             self._config['templates'] = {}
 
+        if 'plugins' not in self._config:
+            self._config['plugins'] = []
+
         instances = {}
         for instance in self._config.get('instances', []):
             if type(instance) is str:
@@ -99,6 +106,10 @@ class Config(object):
     @property
     def instances(self):
         return self._config['instances']
+
+    @property
+    def plugins(self):
+        return self._config['plugins']
 
     def __str__(self):
         return yaml.dump(self._config)
@@ -211,9 +222,25 @@ def main():
             logger.error('Output dir is not a directory %s', output_dir)
             return 1
 
+    for plugin_name in config.plugins:
+        try:
+            plugin = importlib.import_module(plugin)
+        except ImportError as e:
+            logger.error("Failed to import plugin: %s", plugin_name)
+            logger.exception(e)
+            return 1
+        else:
+            try:
+              plugin.init(jinja2.Environment)
+            except AttributeError:
+              logger.error("Failed to call %s.init, method not found", plugin_name)
+              return 1
+        
+
     for name, template in config.templates.items():
         for instance in instances:
             rendered_name = instance.render_template_name(name)
+            template = instance.render_template_name(template)
             dest = os.path.join(config.config.get('output_dir', ''), rendered_name)
             logger.info('Rendering %s', dest)
             with open(dest, 'w+') as fh:
