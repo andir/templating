@@ -119,26 +119,31 @@ class Instance(object):
     logger = logging.getLogger('templating.Instance')
 
     @classmethod
-    def create_instance(cls, instance_name, config):
+    def create_instance(cls, instance_name, config, env):
         defaults = copy.deepcopy(config.defaults)
         deep_update(defaults, config.instances[instance_name])
 
-        return cls(instance_name, defaults)
+        return cls(instance_name, defaults, env)
 
-    def __init__(self, name, context=None):
+    def __init__(self, name, context=None, env=None):
         if context:
             context.update(instance=name)
             self._context = context
         else:
             self._context = {'instance': name}
 
+        if env:
+            self._env = env
+        else:
+            self._env = jinja2.Environment()
+
     def render_template_name(self, template_name):
-        return jinja2.Template(template_name).render(**self._context)
+        return self._env.from_string(template_name).render(**self._context)
 
     def render(self, template_path):
         self.logger.debug('Instance context: %s', self._context)
         with open(template_path) as fh:
-            return jinja2.Template(fh.read()).render(**self._context)
+            return self._env.from_string(fh.read()).render(**self._context)
 
     def __str__(self):
         return yaml.dump(self._context)
@@ -198,6 +203,7 @@ def main():
     logging.basicConfig(level=log_level, format=log_format)
 
     config_path = discover_config(args.config)
+    
 
     if config_path is None:
         return 1
@@ -205,15 +211,27 @@ def main():
     with open(config_path) as fh:
         config = Config(fh)
 
+    # allow custom template tags
+    
+    kwargs = {}
+    for setting in [ 'block_start_string', 'block_end_string', 'variable_start_string', 'variable_end_string',
+                      'comment_start_string', 'comment_end_string']:
+        if setting in config.config:
+            val = str(config.config[setting])
+            kwargs[setting] = val
+
+    env = jinja2.Environment(**kwargs)
+
     if args.instance:
         instance_name = args.instance
-        instances = [ Instance.create_instance(instance_name, config) ]
+        instances = [ Instance.create_instance(instance_name, config, env) ]
     else:
         instances = [
-            Instance.create_instance(name, config) for name in config.instances
+            Instance.create_instance(name, config, env) for name in config.instances
         ]
 
     output_dir = os.path.abspath(config.config.get('output_dir', None))
+ 
 
     if output_dir:
         if not os.path.exists(output_dir):
@@ -222,6 +240,8 @@ def main():
             logger.error('Output dir is not a directory %s', output_dir)
             return 1
 
+ 
+    # load plugins
     for plugin_name in config.plugins:
         try:
             plugin = importlib.import_module(plugin)
@@ -231,7 +251,7 @@ def main():
             return 1
         else:
             try:
-              plugin.init(jinja2.Environment)
+              plugin.init(env)
             except AttributeError:
               logger.error("Failed to call %s.init, method not found", plugin_name)
               return 1
@@ -242,7 +262,7 @@ def main():
             rendered_name = instance.render_template_name(name)
             template = instance.render_template_name(template)
             dest = os.path.join(config.config.get('output_dir', ''), rendered_name)
-            logger.info('Rendering %s', dest)
+            logger.info('Rendering %s to %s', template, dest)
             with open(dest, 'w+') as fh:
                 fh.write(instance.render(template))
 
