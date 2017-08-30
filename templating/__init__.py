@@ -179,10 +179,19 @@ def discover_config(path=None, logger=logging.getLogger('templating.discover_con
     logger.error('No config file found.')
 
 
+def create_directories(path):
+    path, _ = os.path.split(path)
+    if not os.path.exists(path):
+        try:
+            os.mkdir(path)
+        except FileNotFoundError:
+            create_directories(path)
+            os.mkdir(path)
+
 
 def main():
     logger = logging.getLogger(__name__)
-    log_format= "%(asctime)-15s %(name)-8s:%(funcName)s [%(levelname)6s] %(message)s"
+    log_format = "%(asctime)-15s %(name)-8s:%(funcName)s [%(levelname)6s] %(message)s"
     logging_choices = {
         'DEBUG': logging.DEBUG,
         'ERROR': logging.ERROR,
@@ -262,6 +271,8 @@ def main():
             rendered_name = instance.render_template_name(name)
             template = instance.render_template_name(template)
             dest = os.path.join(config.config.get('output_dir', ''), rendered_name)
+            if not os.path.exists(dest):
+                create_directories(dest)
             logger.info('Rendering %s to %s', template, dest)
             with open(dest, 'w+') as fh:
                 fh.write(instance.render(template))
