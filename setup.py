@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='templating',
-    version='0.4.0',
+    version='0.5.0',
     packages=['templating'],
     url='https://github.com/andir/templating',
     license='GPLv3',
