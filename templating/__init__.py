@@ -203,7 +203,7 @@ def main():
     logging.basicConfig(level=log_level, format=log_format)
 
     config_path = discover_config(args.config)
-    
+
 
     if config_path is None:
         return 1
@@ -212,7 +212,7 @@ def main():
         config = Config(fh)
 
     # allow custom template tags
-    
+
     kwargs = {}
     for setting in [ 'block_start_string', 'block_end_string', 'variable_start_string', 'variable_end_string',
                       'comment_start_string', 'comment_end_string']:
@@ -230,21 +230,21 @@ def main():
             Instance.create_instance(name, config, env) for name in config.instances
         ]
 
-    output_dir = os.path.abspath(config.config.get('output_dir', None))
- 
+    output_dir = config.config.get('output_dir', None)
 
     if output_dir:
+        output_dir = os.path.abspath(output_dir)
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
         elif not os.path.isdir(output_dir):
             logger.error('Output dir is not a directory %s', output_dir)
             return 1
 
- 
+
     # load plugins
     for plugin_name in config.plugins:
         try:
-            plugin = importlib.import_module(plugin)
+            plugin = importlib.import_module(plugin_name)
         except ImportError as e:
             logger.error("Failed to import plugin: %s", plugin_name)
             logger.exception(e)
@@ -255,7 +255,7 @@ def main():
             except AttributeError:
               logger.error("Failed to call %s.init, method not found", plugin_name)
               return 1
-        
+
 
     for name, template in config.templates.items():
         for instance in instances:
